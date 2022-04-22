@@ -3,6 +3,7 @@
 	This tool is based on spidev-test tool which is part of Linux kernel, please
 	check it for more details.
 	
+	Copyright (C) 2022, Fabmicro, LLC., Tyumen, Russia. 
 	Copyright (C) 2022, Ruslan Zalata <rz@fabmicro.ru>
 
 	SPDX-License-Identifier: GPL-2.0-or-later
