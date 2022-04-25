@@ -200,6 +200,8 @@ int main(int argc, char *argv[])
 	close(fd);
 
 
+	// Calculate statistics
+
 	ptr = (unsigned short*) (tr.rx_buf + 2);
 
 	for(int i = 0; i < samples; i++)
@@ -208,9 +210,9 @@ int main(int argc, char *argv[])
 			uint16_t val = __bswap_16(*ptr++);
 
 			if(i == 0) { // initial data
-				min[ch] = 0xffff;
-				max[ch] = 0;
-				sum[ch] = 0;
+				min[ch] = 0xffff;	// max possible value
+				max[ch] = 0;		// min possible value
+				sum[ch] = 0;		// zero
 			}
 
 
@@ -223,14 +225,17 @@ int main(int argc, char *argv[])
 			sum[ch] += val;
 		}
 		
-	printf("Statistics (min, avg, max): ");
 
 	for(int j = 0; j < strlen(channels); j++) {
 		int ch = (channels[j] - 0x30) % 16;
-		printf("ch[%d] = (%d, %lld, %d) ", ch, min[ch], sum[ch] / samples, max[ch]);
+		printf("Statistics ch[%d]: (min, avg, max, dmin, dmax) = (%d, %lld, %d, %lld, %lld)\n",
+			ch, min[ch], sum[ch] / samples,
+			max[ch], sum[ch] / samples - min[ch],
+			max[ch] - sum[ch] / samples);
 	}
 
-	printf("\n");
+
+	// Write captured data to file
 
 	if (output_file) {
 		fd = open(output_file, O_WRONLY | O_CREAT | O_TRUNC, 0666);
