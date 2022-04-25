@@ -22,6 +22,7 @@
 #include <sys/ioctl.h>
 #include <linux/ioctl.h>
 #include <sys/stat.h>
+#include <byteswap.h>
 #include <linux/types.h>
 #include <spidev.h> 
 
@@ -47,7 +48,9 @@ static int samples = 1;
 
 static void usage(const char *prog)
 {
-	printf("Usage: %s [-DsbdlHOLC3vpNR24SI]\n", prog);
+	printf("ADC128 tool allows reading data from ADC in blocks using SPIDEV API\n"
+	       "Copyright (C) 2022, Fabmicro, LLC., Ruslan Zalata <rz@fabmicro.ru>\n\n");
+	printf("Usage: %s [-DsoCS]\n", prog);
 	puts("  -D --device   device to use (default /dev/spidev1.1)\n"
 	     "  -s --speed    max speed (Hz)\n"
 	     "  -o --output   output data to a file (e.g. \"results.bin\")\n"
@@ -102,6 +105,9 @@ static void parse_opts(int argc, char *argv[])
 
 int main(int argc, char *argv[])
 {
+	uint64_t sum[16];
+	uint16_t min[16];
+	uint16_t max[16];
 	int ret = 0;
 	int fd;
 
@@ -169,7 +175,7 @@ int main(int argc, char *argv[])
 
 	// Fill ADC channel numbers inito TX block times samples
 
-	short *ptr = (short*) tr.tx_buf;
+	unsigned short *ptr = (unsigned short*) tr.tx_buf;
 
 	for(int i = 0; i < samples; i++)
 		for(int j = 0; j < strlen(channels); j++)
@@ -192,6 +198,39 @@ int main(int argc, char *argv[])
 	printf("Effective transfer rate: %.1fkbps\n", tx_rate / 1024);
 
 	close(fd);
+
+
+	ptr = (unsigned short*) (tr.rx_buf + 2);
+
+	for(int i = 0; i < samples; i++)
+		for(int j = 0; j < strlen(channels); j++) {
+			int ch = (channels[j] - 0x30) % 16;
+			uint16_t val = __bswap_16(*ptr++);
+
+			if(i == 0) { // initial data
+				min[ch] = 0xffff;
+				max[ch] = 0;
+				sum[ch] = 0;
+			}
+
+
+			if(val < min[ch])
+				min[ch] = val; 
+
+			if(val > max[ch])
+				max[ch] = val; 
+
+			sum[ch] += val;
+		}
+		
+	printf("Statistics (min, avg, max): ");
+
+	for(int j = 0; j < strlen(channels); j++) {
+		int ch = (channels[j] - 0x30) % 16;
+		printf("ch[%d] = (%d, %lld, %d) ", ch, min[ch], sum[ch] / samples, max[ch]);
+	}
+
+	printf("\n");
 
 	if (output_file) {
 		fd = open(output_file, O_WRONLY | O_CREAT | O_TRUNC, 0666);
