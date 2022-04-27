@@ -195,7 +195,7 @@ int main(int argc, char *argv[])
 
 	double tx_rate = 1.0 * (len * 8 * 1000000000LL / interval);
 
-	printf("Effective transfer rate: %.1fkbps\n", tx_rate / 1024);
+	printf("Effective transfer rate: %.1fkbps (%.1f kSamples/s\n", tx_rate / 1024, tx_rate / 16 / samples);
 
 	close(fd);
 
